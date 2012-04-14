@@ -1,0 +1,47 @@
+\documentclass[a4paper,12pt,titlepage]{article}
+
+
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{latexsym}
+\usepackage{amssymb}
+\usepackage{float}
+\usepackage{subfigure}
+
+\parindent=0pt% This enforces no indent!
+\newcommand{\scale}{0.5}
+\begin{document}
+
+
+
+\title{A Review of the Couette and Poiseuille Flows With Oscillitory Driving}
+\author{Jonathan Varkovitzky}
+\maketitle
+
+
+\pagestyle{plain} % No headers, just page numbers
+\pagenumbering{roman} % Roman numerals
+\tableofcontents
+
+\newpage
+
+\pagenumbering{roman}
+\setcounter{page}{2}
+%\listoffigures
+
+%\newpage
+
+\pagenumbering{arabic}
+\abstract{Here we investigate the Couetteand  Poiseuille flows with an oscillitory driving plate.  To build up to this model we are going to first study the two flows with uniform plate motion.  The reason we will study these uniform plate motions first is that those flows are well documented and have known analytic solutions.  This will make them good benchmark tests of the future codes written before adding in oscillitory motions.}
+
+
+
+%\newpage
+\section{Flow Descriptions}
+
+For both flows that we are going to study the physical set up is fairly similar.  We have two linear plates above and below a fluid which are defining the channel in which we are studying the flow.  The lower plate is fixed and will not move while the top plate has some velocity $U(x)$.  In the traditional Couette and Poiseuille flows $U(x) = U_0$, however in our study we hope to impart an oscillitory motion in the following form 
+
+\[
+U(x) = U_0(1+\alpha \sin(wt)) \ni |\alpha| < 1
+\]
+\end{document}
