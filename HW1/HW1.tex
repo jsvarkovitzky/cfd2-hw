@@ -12,7 +12,8 @@
 \newcommand{\scale}{0.5}
 \begin{document}
 
-
+\newcommand{\ul}{\underline}
+\newcommand{\p}{\partial}
 
 \title{A Review of the Couette and Poiseuille Flows With Oscillitory Driving}
 \author{Jonathan Varkovitzky}
@@ -32,16 +33,66 @@
 %\newpage
 
 \pagenumbering{arabic}
-\abstract{Here we investigate the Couetteand  Poiseuille flows with an oscillitory driving plate.  To build up to this model we are going to first study the two flows with uniform plate motion.  The reason we will study these uniform plate motions first is that those flows are well documented and have known analytic solutions.  This will make them good benchmark tests of the future codes written before adding in oscillitory motions.}
+\abstract{Here we investigate the Couette and  Poiseuille flows with an oscillitory driving plate.  To build up to this model we are going to first study the two flows with uniform plate motion.  The reason we will study these uniform plate motions first is that those flows are well documented and have known analytic solutions.  This will make them good benchmark tests of the future codes written before adding in oscillitory motions.}
 
 
 
 %\newpage
-\section{Flow Descriptions}
+\section{Background Information}
 
-For both flows that we are going to study the physical set up is fairly similar.  We have two linear plates above and below a fluid which are defining the channel in which we are studying the flow.  The lower plate is fixed and will not move while the top plate has some velocity $U(x)$.  In the traditional Couette and Poiseuille flows $U(x) = U_0$, however in our study we hope to impart an oscillitory motion in the following form 
+Before investigating the Couette and Poiseuille flows it is going to be nessisary to breifly review the behavior of a Navier-Stokes (N-S) flow between parallel plates.  The flow between parallel plates is a powerful example problem of N-S flow since there is a known closed form solution. The caviat for this solution is that it is only valid once the flow fully develops as before then there are non-linear terms which cannot be easily handled.  A rule of thumb for the distance until the flow is fully developed is generally several multiples of the channel width \cite{kundu}.  The flow in the channel can be generally descibed for having driving from both an external pressure gradient and movement of the top plate at some velocity $U_0$.
+
+We begin describing the flow by looking at the x and y momentum equations for the fluid,
+
+\begin{eqnarray}
+&& 0 = -\frac{1}{\rho} \frac{\p p}{\p x} + \nu \frac{d^2 u}{dy^2}\nonumber \\
+&& 0 = -\frac{1}{\rho} \frac{\p p}{\p y}.
+\end{eqnarray}
+
+At first glance we can see from the y momentum equation that p is not a function of y.  From the second equation we see that pressure gradient is a constant function in x since it can be rewritten as,
 
 \[
-U(x) = U_0(1+\alpha \sin(wt)) \ni |\alpha| < 1
+\frac{\p p}{\p x} = \nu \rho \frac{d^2 u}{dy^2}.
 \]
+
+We can easily solve for the pressure function by integrating the x momentum equation twice with respect to y to get,
+
+\[
+0 = -\frac{y^2}{2}\frac{dp}{dx} + \mu u + A y + B.
+\]
+
+Note that $\mu = \rho \nu$ and A and B are constants of integration.  We can solve for our contants of integration now my solving for $u$ and applying the known boundaries which state that at the boundaries the fluid velocity match those of the wall,
+
+\begin{eqnarray}
+&& u = \frac{1}{\rho} \left( \frac{y^2}{2} \frac{dp}{dx} - Ay -B \right),\nonumber \\
+&& u(0) = 0 \Rightarrow B = 0, \nonumber \\
+&& u(2b) = 0 \Rightarrow A = \frac{b}{\mu} \frac{dp}{dx}.
+\end{eqnarray}
+
+Where b is the radius of the channel.  Plugging these results into our definition of $u$ we get,
+
+\[
+u(y) = \frac{yU_0}{2b} - \frac{y}{\mu} \frac{dp}{dx}\left(b-\frac{y}{2}\right)
+\]
+
+\section{Flow Descriptions}
+
+For both flows that we are going to study the physical set up is fairly similar.  We have two linear plates above and below a fluid which are defining the channel in which we are studying the flow.  The lower plate is fixed and will not move while the top plate has some velocity $U(x)$.  In the traditional Couette and Poiseuille flows $U(x) = U_0$, however in our study we hope to impart an oscillitory motion in the following form,
+
+\[
+U(x) = U_0(1+\alpha \sin(wt)) \ni |\alpha| < 1.
+\]
+
+This will be be analagous to the upper plate moving forward while vibrating back and forth in such a way that its velocity remains positive.  
+
+\subsection{Plane Couette Flow}
+The plane Couette flow is the simpler of the two flows as the problem begins with without any externally applied pressure gradient.  
+
+%**************************************************************************
+%Bibliography**************************************************************
+%**************************************************************************
+
+\bibliographystyle{plain}
+\bibliography{bib}
+
 \end{document}
