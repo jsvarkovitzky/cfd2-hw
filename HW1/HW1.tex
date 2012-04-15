@@ -15,7 +15,7 @@
 \newcommand{\ul}{\underline}
 \newcommand{\p}{\partial}
 
-\title{A Review of the Couette and Poiseuille Flows With Oscillitory Driving}
+\title{A Review of the Couette and Poiseuille Flows With Oscillatory Driving}
 \author{Jonathan Varkovitzky}
 \maketitle
 
@@ -24,23 +24,23 @@
 \pagenumbering{roman} % Roman numerals
 \tableofcontents
 
-\newpage
+%\newpage
 
 \pagenumbering{roman}
 \setcounter{page}{2}
 %\listoffigures
 
-%\newpage
+\newpage
 
 \pagenumbering{arabic}
-\abstract{Here we investigate the Couette and  Poiseuille flows with an oscillitory driving plate.  To build up to this model we are going to first study the two flows with uniform plate motion.  The reason we will study these uniform plate motions first is that those flows are well documented and have known analytic solutions.  This will make them good benchmark tests of the future codes written before adding in oscillitory motions.}
+\abstract{Here we investigate the Couette and  Poiseuille flows with an oscillatory driving plate.  To build up to this model we are going to first study the two flows with uniform plate motion.  The reason we will study these uniform plate motions first is that those flows are well documented and have known analytic solutions.  This will make them good benchmark tests of the future codes written before adding in oscillatory motions.}
 
 
 
 %\newpage
 \section{Background Information}
 
-Before investigating the Couette and Poiseuille flows it is going to be nessisary to breifly review the behavior of a Navier-Stokes (N-S) flow between parallel plates.  The flow between parallel plates is a powerful example problem of N-S flow since there is a known closed form solution. The caviat for this solution is that it is only valid once the flow fully develops as before then there are non-linear terms which cannot be easily handled.  A rule of thumb for the distance until the flow is fully developed is generally several multiples of the channel width \cite{kundu}.  The flow in the channel can be generally descibed for having driving from both an external pressure gradient and movement of the top plate at some velocity $U_0$.
+Before investigating the Couette and Poiseuille flows it is going to be necessary to briefly review the behavior of a Navier-Stokes (N-S) flow between parallel plates.  The flow between parallel plates is a powerful example problem of N-S flow since there is a known closed form solution. The caveat for this solution is that it is only valid once the flow fully develops as before then there are non-linear terms which cannot be easily handled.  A rule of thumb for the distance until the flow is fully developed is generally several multiples of the channel width \cite{kundu}.  The flow in the channel can be generally descibed for having driving from both an external pressure gradient and movement of the top plate at some velocity $U_0$.
 
 We begin describing the flow by looking at the x and y momentum equations for the fluid,
 
@@ -61,7 +61,7 @@ We can easily solve for the pressure function by integrating the x momentum equa
 0 = -\frac{y^2}{2}\frac{dp}{dx} + \mu u + A y + B.
 \]
 
-Note that $\mu = \rho \nu$ and A and B are constants of integration.  We can solve for our contants of integration now my solving for $u$ and applying the known boundaries which state that at the boundaries the fluid velocity match those of the wall,
+Note that $\mu = \rho \nu$ and A and B are constants of integration.  We can solve for our constants of integration now my solving for $u$ and applying the known boundaries which state that at the boundaries the fluid velocity match those of the wall,
 
 \begin{eqnarray}
 && u = \frac{1}{\rho} \left( \frac{y^2}{2} \frac{dp}{dx} - Ay -B \right),\nonumber \\
@@ -73,20 +73,44 @@ Where b is the radius of the channel.  Plugging these results into our definitio
 
 \[
 u(y) = \frac{yU_0}{2b} - \frac{y}{\mu} \frac{dp}{dx}\left(b-\frac{y}{2}\right)
+\label{flowProfile}
 \]
 
 \section{Flow Descriptions}
 
-For both flows that we are going to study the physical set up is fairly similar.  We have two linear plates above and below a fluid which are defining the channel in which we are studying the flow.  The lower plate is fixed and will not move while the top plate has some velocity $U(x)$.  In the traditional Couette and Poiseuille flows $U(x) = U_0$, however in our study we hope to impart an oscillitory motion in the following form,
+For both flows that we are going to study the physical set up is fairly similar.  We have two linear plates above and below a fluid which are defining the channel in which we are studying the flow.  The lower plate is fixed and will not move while the top plate has some velocity $U(x)$.  In the traditional Couette and Poiseuille flows $U(x) = U_0$, however in our study we hope to impart an oscillatory motion in the following form,
 
 \[
 U(x) = U_0(1+\alpha \sin(wt)) \ni |\alpha| < 1.
 \]
 
-This will be be analagous to the upper plate moving forward while vibrating back and forth in such a way that its velocity remains positive.  
+This will be be analogous to the upper plate moving forward while vibrating back and forth in such a way that its velocity remains positive.  
 
 \subsection{Plane Couette Flow}
-The plane Couette flow is the simpler of the two flows as the problem begins with without any externally applied pressure gradient.  
+The plane Couette flow is the simpler of the two flows as the problem begins with without any externally applied pressure gradient.  Since there is no external pressure gradient $\frac{dp}{dx}$ we can simplify equation \ref{flowProfile} to,
+
+\[
+u(y) = \frac{yU_0}{2b}.
+\]
+
+\subsection{Plane Poiseuille Flow}
+The plane Poiseuille flow includes external forcing due to a pressure gradient so its velocity is described by the full equation \ref{flowProfile},
+
+\[
+u(y) = \frac{yU_0}{2b} - \frac{y}{\mu} \frac{dp}{dx}\left(b-\frac{y}{2}\right)
+\]
+
+\subsection{Boundary Conditions}
+In simulating both of the described flows specific boundary conditions must be enforced to ensure that an unnecessary boundary layer does not form at the inflow boundary of the simulation.  This is more of a concern for the Poiseuille flow than for the Couette flow as the former is driven by a pressure gradient on the inlet side.  However, since the pressure gradient is purely in the x-direction we simply apply a uniform pressure gradient along the left edge of the boundary.  The other important boundary to consider are those of the top and bottom walls of the flow channel.  In our simulation we will be enforcing solid wall conditions with no inflow or outflow on either wall.  The top wall will have an imparted velocity that is either constant or oscillatory as described previously.  The final boundary at the outflow side of the domain will allow fluid to freely leave the system without imparting any information back into the simulation.
+ 
+\section{Historical Experimental and Numerical Results}
+
+In the literature there are several examples of experiments to validate the flows described for the Couette flow problem.  One of the first was done by Tillmark \cite{tillmark} in 1992.  In this paper Tillmark describes an apparatus that was built with a large transparent loop that cycled to replicate the moving plate.  Using this apparatus Tillmark was able to reproduce the laminar flows that are predicted by the mathematics previously described.  These results give us confidence in the mathematics derived from Navier-Stokes to describe the flow.  More recently Philip et al. \cite{philip} 2011 performed direct numerical simulations to model both the Couette and Poiseuille flows and show the existence of the laminar flows expects as well as the systems ability to create turbulent flow at certain Reynolds Numbers.  
+
+\section{Desired Results and Comparisons}
+
+It is going to be our goal to model the Couette and Poiseuille flows in their original form and with a top plate with an oscillatory movement.  We will use our initial constant plate velocity examples to test and verify our code against known analytic solutions.  The results we hope to compare with the analytic solution will be both the velocity field and shear stress in the fluid.  Following this validation we hope to implement the oscillatory boundary and observe the resulting flow.  No literature on this topic has been found and means that the results found could be original work.  
+
 
 %**************************************************************************
 %Bibliography**************************************************************
