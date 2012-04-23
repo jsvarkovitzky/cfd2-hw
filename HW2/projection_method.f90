@@ -303,20 +303,23 @@ program main
 
 !***  Source of formulas are CDS  derivatives from Lecture 5 pg 8 notes ***
                 ! Advective terms
-                uu_x = 
-                uv_y = 
+                uu_x = 1/dx*(Flux_ux(i+1,j)-Flux_ux(i,j))
+                uv_y = F_edge(j)/dzeta*(Flux_uy(i,j)-Flux_uy(i,j-1))
                 
-                uv_x = 
-                vv_y = 
+                uv_x = 1/dx*(Flux_uy(i,j)-Flux_uy(i-1,j))
+                vv_y = F_center(j+1)/dzeta*(Flux_vy(i,j)-Flux_vy(i,j-1))
                 
                 ! Diffusive terms
-                u_xx = 
-                u_yy = 
-                v_xx = 
-                v_yy = 
+
+                !!!CHECK THAT FLUXes USED CORRECTLY AND IF F() SHOULD BE USED INSTEAD!!!
+
+                u_xx = 1/dx**2*(u(i+1,j)-2*u(i,j)+u(i-1,j))
+                u_yy = F_edge(j)(j+1)/dzeta**2*(F_center(j+1)*(u(i,j+1)-u(i,j))-F_center(j)*(u(i,j)-u(i,j-1)))
+                v_xx = 1/dx**2*(v(i+1,j)-2*v(i,j)+v(i-1,j))
+                v_yy = F_center(j+1)/dzeta**2*(F_edge(j+1)*(v(i,j+1)-v(i,j))-F_edge(j)*(v(i,j)-v(i,j-1)))
                 
-                ! Update to u* and v* values
-                u_star(i,j) = 
+                ! Update to u* and v* value
+                u_star(i,j) =  
                 v_star(i,j) = 
             enddo
         enddo
