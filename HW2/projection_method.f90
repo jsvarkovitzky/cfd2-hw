@@ -314,13 +314,13 @@ program main
                 !!!CHECK THAT FLUXes USED CORRECTLY AND IF F() SHOULD BE USED INSTEAD!!!
 
                 u_xx = 1/dx**2*(u(i+1,j)-2*u(i,j)+u(i-1,j))
-                u_yy = F_edge(j)(j+1)/dzeta**2*(F_center(j+1)*(u(i,j+1)-u(i,j))-F_center(j)*(u(i,j)-u(i,j-1)))
+                u_yy = F_edge(j)/dzeta**2*(F_center(j+1)*(u(i,j+1)-u(i,j))-F_center(j)*(u(i,j)-u(i,j-1)))
                 v_xx = 1/dx**2*(v(i+1,j)-2*v(i,j)+v(i-1,j))
                 v_yy = F_center(j+1)/dzeta**2*(F_edge(j+1)*(v(i,j+1)-v(i,j))-F_edge(j)*(v(i,j)-v(i,j-1)))
                 
                 ! Update to u* and v* value
-                u_star(i,j) =  
-                v_star(i,j) = 
+                u_star(i,j) = u(i,j) + dt*(-(uu_x+uv_y)+nu*(u_xx+u_yy))
+                v_star(i,j) = v(i,j) + dt*(-(vv_y+uv_x)+nu*(v_xx+v_yy))
             enddo
         enddo
         
@@ -346,8 +346,8 @@ program main
         !***  ADD RHS TO VELOCITY UPDATE FORLUMAS:  ***
         !**********************************************
         forall (i=1:N_x,j=1:N_y)
-            u(i,j) = 
-            v(i,j) = 
+            u(i,j) = u_star(i,j) - dt/(rho*dx)*(p(i+1,j)-p(i,j))
+            v(i,j) = v_star(i,j) - dt/(rho*dzeta)*(p(i,j+1)-p(i,j))*F_center(j+1)
         end forall
         
         ! ====================================================================
