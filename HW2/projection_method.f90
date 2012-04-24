@@ -98,14 +98,14 @@ contains
 
         if (t==0) then
         open(unit=70,file='_output/UVP.dat',access='sequential',status='unknown')
-        write(70,*) ' VARIABLES= "x", "y", "u", "v", "p"'
-        write(70,100) t,N_X,N_Y
+!        write(70,*) ' VARIABLES= "x", "y", "u", "v", "p"'
+!        write(70,100) t,N_X,N_Y
         endif
 
  100 FORMAT('ZONE T="t = ',e26.16,'"',' F=POINT, I=',I5,' J=', I5)
 
         if (t>0) then
-        write(70,100) t,N_X,N_Y
+!        write(70,100) t,N_X,N_Y
         endif
         
         ! Write out data
