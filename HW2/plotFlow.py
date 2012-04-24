@@ -68,4 +68,4 @@ i = 200
 j = 80
 uvp = readIn(200,80,fname)
 x = makeFrames(uvp,i,j)
-
+show()
