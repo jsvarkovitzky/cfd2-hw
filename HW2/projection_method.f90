@@ -307,16 +307,16 @@ program main
                 uv_y = F_center(j)/dzeta*(Flux_uy(i,j)-Flux_uy(i,j-1))
                 
                 uv_x = 1/dx*(Flux_uy(i,j)-Flux_uy(i-1,j))
-                vv_y = F_edge(j+1)/dzeta*(Flux_vy(i,j)-Flux_vy(i,j-1))
+                vv_y = F_edge(j)/dzeta*(Flux_vy(i,j)-Flux_vy(i,j-1))
                 
                 ! Diffusive terms
 
                 !!!CHECK THAT FLUXes USED CORRECTLY AND IF F() SHOULD BE USED INSTEAD!!!
 
                 u_xx = 1/dx**2*(u(i+1,j)-2*u(i,j)+u(i-1,j))
-                u_yy = F_center(j)/dzeta**2*(F_edge(j+1)*(u(i,j+1)-u(i,j))-F_edge(j)*(u(i,j)-u(i,j-1)))
+                u_yy = F_center(j)/dzeta**2*(F_edge(j)*(u(i,j+1)-u(i,j))-F_edge(j-1)*(u(i,j)-u(i,j-1)))
                 v_xx = 1/dx**2*(v(i+1,j)-2*v(i,j)+v(i-1,j))
-                v_yy = F_edge(j+1)/dzeta**2*(F_center(j+1)*(v(i,j+1)-v(i,j))-F_center(j)*(v(i,j)-v(i,j-1)))
+                v_yy = F_edge(j)/dzeta**2*(F_center(j+1)*(v(i,j+1)-v(i,j))-F_center(j)*(v(i,j)-v(i,j-1)))
                 
                 ! Update to u* and v* value
                 u_star(i,j) = u(i,j) + dt*(-(uu_x+uv_y)+nu*(u_xx+u_yy))
@@ -347,7 +347,7 @@ program main
         !**********************************************
         forall (i=1:N_x,j=1:N_y)
             u(i,j) = u_star(i,j) - dt/(rho*dx)*(p(i+1,j)-p(i,j))
-            v(i,j) = v_star(i,j) - dt/(rho*dzeta)*(p(i,j+1)-p(i,j))*F_center(j+1)
+            v(i,j) = v_star(i,j) - dt/(rho*dzeta)*(p(i,j+1)-p(i,j))*F_edge(j)
         end forall
         
         ! ====================================================================
@@ -423,12 +423,21 @@ subroutine bc(u,v,U_inf)
     ! u(i,0) = -u(i,1)      u(i,N_y+1) = u(i,N_y)
     ! v(i,0) = 0.d0         v(i,N_y+1) = v(i,N_y)
     ! p(i,0) = p(i,1)       p(i,N_y+1) = 0.d0
-    forall(i=0:N_x+1)
+    forall(i=N_x/2:N_x+1)
         u(i,0) = -u(i,1)
         v(i,0) = 0.d0     
         u(i,N_y+1) = u(i,N_y)
         v(i,N_y+1) = v(i,N_y)
     end forall
+
+    !Adding first half of domain with free shear BCs
+    forall(i=0:N_x/2)
+        u(i,0) = u(i,1)
+        v(i,0) = v(i,1)     
+        u(i,N_y+1) = u(i,N_y)
+        v(i,N_y+1) = v(i,N_y)
+    end forall
+
     ! Left Boundaries
     !   x 0,j  |      x 1,j             
     !  0,j     |                        u(0,j) = U_inf
