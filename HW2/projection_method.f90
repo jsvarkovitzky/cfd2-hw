@@ -204,7 +204,7 @@ program main
 !!!!!!!!!!!!!!!!!!
 
     N_x=400  !Number of grid points in x-direction
-    N_y=160   !Number of grid points in y-direction
+    N_y=80   !Number of grid points in y-direction
     L_x=10.0 !Length of box in x-direction
     L_y=4.0  !Length of box in y-direction
     n_steps=20 !Interval that u,v and p are printed to UVP.dat
