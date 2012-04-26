@@ -27,7 +27,7 @@ def makeFrames(uvp,i,j):
     framenos = size(uvp)/(i*j)
     print "The number of frames to be plotted is %s..." %framenos
 
-    for frameno in range(0,2):
+    for frameno in range(0,10):
         plotFrame(uvp,frameno,framenos)
 
 ################
@@ -52,11 +52,12 @@ def plotFrame(uvp,k,framenos):
    
 
     print v
-    if k == 1:
+    if k == 9:
         figure(1)
         clf()
-        pcolormesh(x,y,v)
+        pcolormesh(x,y,u)
         colorbar()
+        clim(0.9,1.0)
     return(x)
 ##################
 ## Main Program ##

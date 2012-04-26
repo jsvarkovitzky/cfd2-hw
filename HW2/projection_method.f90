@@ -156,7 +156,7 @@ program main
     ! Physics
     double precision :: U_inf = 1.d0
     double precision :: rho,nu,Re !rho = 1.d0, nu=1.d-3
-    
+
     ! ========================================================================
     ! Velocity and pressures
     double precision, allocatable :: u(:,:),v(:,:),p(:,:),u_star(:,:),v_star(:,:)
@@ -203,8 +203,8 @@ program main
 !!  Parameters: !!
 !!!!!!!!!!!!!!!!!!
 
-    N_x=200  !Number of grid points in x-direction
-    N_y=80   !Number of grid points in y-direction
+    N_x=400  !Number of grid points in x-direction
+    N_y=160   !Number of grid points in y-direction
     L_x=10.0 !Length of box in x-direction
     L_y=4.0  !Length of box in y-direction
     n_steps=20 !Interval that u,v and p are printed to UVP.dat
@@ -246,7 +246,11 @@ program main
     dt = CFL * dx / (Re * U_inf)
     t = 0.d0
     frame = 0
-    
+
+    nu = 1.d-3
+    rho = 1.d0
+
+
     ! Output inital condition
     call output_grid(frame,t,u,v,p)
     print "(a,i3,a,i4,a,e16.8)","Writing frame ",frame," during step n=",0," t=",t
@@ -303,19 +307,19 @@ program main
 
 !***  Source of formulas are CDS  derivatives from Lecture 5 pg 8 notes ***
                 ! Advective terms
-                uu_x = 1/dx*(Flux_ux(i+1,j)-Flux_ux(i,j))
+                uu_x = 1.d0/dx*(Flux_ux(i+1,j)-Flux_ux(i,j))
                 uv_y = F_center(j)/dzeta*(Flux_uy(i,j)-Flux_uy(i,j-1))
                 
-                uv_x = 1/dx*(Flux_uy(i,j)-Flux_uy(i-1,j))
+                uv_x = 1.d0/dx*(Flux_uy(i,j)-Flux_uy(i-1,j))
                 vv_y = F_edge(j)/dzeta*(Flux_vy(i,j)-Flux_vy(i,j-1))
                 
                 ! Diffusive terms
 
                 !!!CHECK THAT FLUXes USED CORRECTLY AND IF F() SHOULD BE USED INSTEAD!!!
 
-                u_xx = 1/dx**2*(u(i+1,j)-2*u(i,j)+u(i-1,j))
+                u_xx = 1.d0/dx**2*(u(i+1,j)-2*u(i,j)+u(i-1,j))
                 u_yy = F_center(j)/dzeta**2*(F_edge(j)*(u(i,j+1)-u(i,j))-F_edge(j-1)*(u(i,j)-u(i,j-1)))
-                v_xx = 1/dx**2*(v(i+1,j)-2*v(i,j)+v(i-1,j))
+                v_xx = 1.d0/dx**2*(v(i+1,j)-2*v(i,j)+v(i-1,j))
                 v_yy = F_edge(j)/dzeta**2*(F_center(j+1)*(v(i,j+1)-v(i,j))-F_center(j)*(v(i,j)-v(i,j-1)))
                 
                 ! Update to u* and v* value
