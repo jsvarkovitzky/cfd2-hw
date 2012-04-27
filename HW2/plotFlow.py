@@ -51,17 +51,17 @@ def plotFrame(uvp,k,framenos):
     p = pArr.reshape(j,i)
    
 
-    print v
+
     if k == 9:
         figure(1)
         clf()
-        pcolormesh(x,y,u)
+        contourf(x,y,u)
         colorbar()
         clim(0.9,1.0)
 
         figure(2)
         clf()
-        pcolormesh(x,y,u)
+        contourf(x,y,u)
         axis([4.8,5.4,0.0,0.1])
         colorbar()
 #        clim(0.9,1.0)
@@ -75,6 +75,8 @@ close('all')
 fname = '_output/UVP.dat'
 i = 400
 j = 80
+print "Reading in %s" %fname
 uvp = readIn(i,j,fname)
+print "Making Images"
 x = makeFrames(uvp,i,j)
 show()

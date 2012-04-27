@@ -147,8 +147,8 @@ program main
     
     ! ========================================================================
     ! Solver parameters
-    integer, parameter :: MAX_ITERATIONS = 10000
-    double precision, parameter :: TOLERANCE = 1.d-4, CFL = 0.8d0
+    integer, parameter :: MAX_ITERATIONS = 100000
+    double precision, parameter :: TOLERANCE = 1.d-7, CFL = 0.8d0
     logical, parameter :: write_star = .false.
     integer :: n_steps
 
@@ -482,8 +482,8 @@ subroutine solve_poisson(P,Q,a,b,cm,cp)
 
     ! Solver parameters
     logical, parameter :: verbose = .false.
-    integer, parameter :: MAX_ITERATIONS = 10000
-    double precision, parameter :: TOLERANCE = 10.d-4
+    integer, parameter :: MAX_ITERATIONS = 100000
+    double precision, parameter :: TOLERANCE = 10.d-7
     double precision, parameter :: w = 1.6d0 ! 1 (GS) < w < 2
 
     ! Local variables
