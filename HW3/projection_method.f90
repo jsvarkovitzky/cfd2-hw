@@ -147,313 +147,318 @@ program main
     
     ! ========================================================================
     ! Solver parameters
-    integer, parameter :: MAX_ITERATIONS = 1000000
-    double precision, parameter :: TOLERANCE = 1.d-6, CFL = 0.8d0
-    logical, parameter :: write_star = .false.
-    integer :: n_steps
+    integer, parameter :: MAX_ITERATIONS = 10000
+     double precision, parameter :: TOLERANCE = 1.d-6, CFL = 0.8d0
+     logical, parameter :: write_star = .false.
+     integer :: n_steps
 
-    ! ========================================================================
-    ! Physics
-    double precision :: U_inf = 1.d0
-    double precision :: rho,nu,Re !rho = 1.d0, nu=1.d-3
+     ! ========================================================================
+     ! Physics
+     double precision :: U_inf = 1.d0
+     double precision :: rho,nu,Re !rho = 1.d0, nu=1.d-3
 
-    ! ========================================================================
-    ! Velocity and pressures
-    double precision, allocatable :: u(:,:),v(:,:),p(:,:),u_star(:,:),v_star(:,:)
-    double precision, allocatable :: u_old(:,:), v_old(:,:)
-    
-    ! ========================================================================
-    ! Locals
-    character*20 :: arg
-    integer :: i,j,n,m,frame,i_R,j_R
-    double precision :: R,t,dt,a
-    double precision, allocatable :: Flux_ux(:,:),Flux_uy(:,:),Flux_vy(:,:)
-    double precision :: uu_x,uv_y,uv_x,vv_y,u_xx,u_yy,v_xx,v_yy
-    double precision, allocatable :: Q(:,:),b(:),cp(:),cm(:)
-    ! ========================================================================
-    
-    ! Get command line arguments
-!    if (iargc() /= 6) then
-!        print *,"Wrong number of command line arguments, expected 6."
-!        print *,"  blasius Nx Ny Lx Ly Nsteps Re"
-!        print *,"    Nx - Number of grid points in x"
-!        print *,"    Ny - Number of grid points in y"
-!        print *,"    Lx - Length of domain in x"
-!        print *,"    Ly - Length of domain in y"
-!        print *,"    Nsteps - Number of steps in between output"
-!        print *,"    Re - Reynolds number of flow"
-!        stop
-!    else
-!        call getarg(1,arg)
-!        read (arg,'(I10)') N_x
-!        call getarg(2,arg)
-!        read (arg,'(I10)') N_y
-!        call getarg(3,arg)
-!        read (arg,'(e16.8)') L_x
-!        call getarg(4,arg)
-!        read (arg,'(e16.8)') L_y
-!        call getarg(5,arg)
-!        read (arg,'(I10)') n_steps
-!        call getarg(6,arg)
-!        read (arg,'(e16.8)') Re
-!    endif
+     ! ========================================================================
+     ! Velocity and pressures
+     double precision, allocatable :: u(:,:),v(:,:),p(:,:),u_star(:,:),v_star(:,:)
+     double precision, allocatable :: u_old(:,:), v_old(:,:)
 
+     ! ========================================================================
+     ! Locals
+     character*20 :: arg
+     integer :: i,j,n,m,frame,i_R,j_R
+     double precision :: R,t,dt,a
+     double precision, allocatable :: Flux_ux(:,:),Flux_uy(:,:),Flux_vy(:,:)
+     double precision :: uu_x,uv_y,uv_x,vv_y,u_xx,u_yy,v_xx,v_yy
+     double precision, allocatable :: Q(:,:),b(:),cp(:),cm(:)
+     ! ========================================================================
 
-!!!!!!!!!!!!!!!!!!
-!!  Parameters: !!
-!!!!!!!!!!!!!!!!!!
-
-    N_x=300  !Number of grid points in x-direction
-    N_y=60   !Number of grid points in y-direction
-    L_x=10.0 !Length of box in x-direction
-    L_y=4.0  !Length of box in y-direction
-    n_steps=100000 !Interval that u,v and p are printed to UVP.dat
-    Re=100.0   !Reynolds number
-
-    print *,"Running blasius with following parameters: "
-    print "(a,i3,a,i3,a)"," (N_x,N_y) = (",N_x,",",N_y,")"
-    print "(a,e16.8,a,e16.8,a)"," (L_x,L_y) = (",L_x,",",L_y,")"
-    print "(a,i4,a)"," Output every ",n_steps," steps"
-    print "(a,e16.8)"," Reynold's number = ",Re
-    
-    ! ========================================================================
-    ! Setup grid and arrays
-    call setup_grid()
-    allocate(Flux_ux(1:N_x+1,0:N_y+1))
-    allocate(Flux_uy(0:N_x,0:N_y))
-    allocate(Flux_vy(0:N_x+1,0:N_y))
-    allocate(Q(1:N_x,1:N_y))
-    allocate(b(1:N_y),cp(1:N_y),cm(1:N_y))
-    
-    ! Calculate matrix coefficients for Poisson solve
-    a = 1.d0 / dx**2
-    forall (j=1:N_y)
-        b(j) = - (2.d0 / dx**2 + F_center(j) / dzeta**2 * (F_edge(j) + F_edge(j-1))) 
-        cp(j) = (F_center(j) * F_edge(j)) / dzeta**2
-        cm(j) = (F_center(j) * F_edge(j-1)) / dzeta**2
-    end forall
-        
-    ! Velocity and pressure arrays
-    allocate(u(1-mbc:N_x+mbc,1-mbc:N_y+mbc),u_star(1-mbc:N_x+mbc,1-mbc:N_y+mbc))
-    allocate(v(1-mbc:N_x+mbc,1-mbc:N_y+mbc),v_star(1-mbc:N_x+mbc,1-mbc:N_y+mbc))
-    allocate(p(1-mbc:N_x+mbc,1-mbc:N_y+mbc))
-    allocate(u_old(1:N_x,1:N_y),v_old(1:N_x,1:N_y))
-    
-    ! Inital conditions
-    u = U_inf
-    v = 0.d0
-    p = 0.d0
-    dt = CFL * dx / (Re * U_inf)
-    t = 0.d0
-    frame = 0
-
-    nu = 1.d-3
-    rho = 1.d0
+     ! Get command line arguments
+ !    if (iargc() /= 6) then
+ !        print *,"Wrong number of command line arguments, expected 6."
+ !        print *,"  blasius Nx Ny Lx Ly Nsteps Re"
+ !        print *,"    Nx - Number of grid points in x"
+ !        print *,"    Ny - Number of grid points in y"
+ !        print *,"    Lx - Length of domain in x"
+ !        print *,"    Ly - Length of domain in y"
+ !        print *,"    Nsteps - Number of steps in between output"
+ !        print *,"    Re - Reynolds number of flow"
+ !        stop
+ !    else
+ !        call getarg(1,arg)
+ !        read (arg,'(I10)') N_x
+ !        call getarg(2,arg)
+ !        read (arg,'(I10)') N_y
+ !        call getarg(3,arg)
+ !        read (arg,'(e16.8)') L_x
+ !        call getarg(4,arg)
+ !        read (arg,'(e16.8)') L_y
+ !        call getarg(5,arg)
+ !        read (arg,'(I10)') n_steps
+ !        call getarg(6,arg)
+ !        read (arg,'(e16.8)') Re
+ !    endif
 
 
-    ! Output inital condition
-    call output_grid(frame,t,u,v,p)
-    print "(a,i3,a,i4,a,e16.8)","Writing frame ",frame," during step n=",0," t=",t
-    
-    ! Open up file to store residual information in
-    open(unit=13, file='residual.dat', status="unknown", action="write")
-    
-    ! ========================================================================
-    ! Main algorithm loop
-    do n=1,MAX_ITERATIONS
-        ! Store old step for convergence test
-        u_old = u(1:N_x,1:N_y)
-        v_old = v(1:N_x,1:N_y)
+ !!!!!!!!!!!!!!!!!!
+ !!  Parameters: !!
+ !!!!!!!!!!!!!!!!!!
 
-        ! ====================================================================
-        ! Apply BC  V = x, U = o, P = +
-        call bc(u,v,U_inf)
-        
-        ! ====================================================================
-        ! Step 1: Update velocity to intermediate step
-        ! Calculate fluxes at each boundary
-        !
-        !  U-Fluxes
-        !                                   |   u   |
-        !         FUY_i,j                i,j| i,j+1 |i+1,j
-        ! -------|---o---|-------    -------v-------v-------
-        !        |       |            i-1,j |  i,j  |  i+1,j
-        !    FUX_i,j    FUX_i+1,j       u   |   u   |   u
-        !        |       |                  |       |
-        ! -------|---o---|-------    -------v-------v-------
-        !         FUY_i,j-1            i,j-1| i,j-1 | i+1,j-1
-        !                                   |   u   |  
-        !  
-        !  V-Fluxes
-        !                                   |   v   |
-        !         FVY_i,j            i-1,j+1| i,j+1 |i,j+1
-        ! -------|---o---|-------    -------u---o---u-------
-        !        |       |            i-1,j |  i,j  |  i+1,j
-        !    FUY_i-1,j  FUY_i,j         v   o   v   o   v
-        !        |       |                  |       |
-        ! -------|---o---|-------    -------u---o---u-------
-        !         FVY_i,j-1            i-1,j| i,j-1 |i,j
-        !                                   |   v   |    
-        forall (i=1:N_x+1,j=0:N_y+1) Flux_ux(i,j) = (u(i-1,j)+u(i,j))**2 / 4.d0
-        forall (i=0:N_x,j=0:N_y) Flux_uy(i,j) = (u(i,j)+u(i,j+1)) * (v(i+1,j)+v(i,j)) / 4.d0
-        forall (i=0:N_x+1,j=0:N_y) Flux_vy(i,j) = (v(i,j+1) + v(i,j))**2 / 4.d0
-    
-        do j=1,N_y
-            do i=1,N_x
+     N_x=200  !Number of grid points in x-direction
+     N_y=40   !Number of grid points in y-direction
+     L_x=10.0 !Length of box in x-direction
+     L_y=4.0  !Length of box in y-direction
+     n_steps=100 !Interval that u,v and p are printed to UVP.dat
+     Re=100.0   !Reynolds number
 
-!********************************************
-!***  ADD RHS TO THE FOLLOWING FORMULAS:  ***
-!********************************************
+     print *,"Running blasius with following parameters: "
+     print "(a,i3,a,i3,a)"," (N_x,N_y) = (",N_x,",",N_y,")"
+     print "(a,e16.8,a,e16.8,a)"," (L_x,L_y) = (",L_x,",",L_y,")"
+     print "(a,i4,a)"," Output every ",n_steps," steps"
+     print "(a,e16.8)"," Reynold's number = ",Re
 
-!***  Source of formulas are CDS  derivatives from Lecture 5 pg 8 notes ***
-                ! Advective terms
-                uu_x = 1.d0/dx*(Flux_ux(i+1,j)-Flux_ux(i,j))
-                uv_y = F_center(j)/dzeta*(Flux_uy(i,j)-Flux_uy(i,j-1))
-                
-                uv_x = 1.d0/dx*(Flux_uy(i,j)-Flux_uy(i-1,j))
-                vv_y = F_edge(j)/dzeta*(Flux_vy(i,j)-Flux_vy(i,j-1))
-                
-                ! Diffusive terms
+     ! ========================================================================
+     ! Setup grid and arrays
+     call setup_grid()
+     allocate(Flux_ux(1:N_x+1,0:N_y+1))
+     allocate(Flux_uy(0:N_x,0:N_y))
+     allocate(Flux_vy(0:N_x+1,0:N_y))
+     allocate(Q(1:N_x,1:N_y))
+     allocate(b(1:N_y),cp(1:N_y),cm(1:N_y))
 
-                !!!CHECK THAT FLUXes USED CORRECTLY AND IF F() SHOULD BE USED INSTEAD!!!
+     ! Calculate matrix coefficients for Poisson solve
+     a = 1.d0 / dx**2
+     forall (j=1:N_y)
+         b(j) = - (2.d0 / dx**2 + F_center(j) / dzeta**2 * (F_edge(j) + F_edge(j-1))) 
+         cp(j) = (F_center(j) * F_edge(j)) / dzeta**2
+         cm(j) = (F_center(j) * F_edge(j-1)) / dzeta**2
+     end forall
 
-                u_xx = 1.d0/dx**2*(u(i+1,j)-2*u(i,j)+u(i-1,j))
-                u_yy = F_center(j)/dzeta**2*(F_edge(j)*(u(i,j+1)-u(i,j))-F_edge(j-1)*(u(i,j)-u(i,j-1)))
-                v_xx = 1.d0/dx**2*(v(i+1,j)-2*v(i,j)+v(i-1,j))
-                v_yy = F_edge(j)/dzeta**2*(F_center(j+1)*(v(i,j+1)-v(i,j))-F_center(j)*(v(i,j)-v(i,j-1)))
-                
-                ! Update to u* and v* value
-                u_star(i,j) = u(i,j) + dt*(-(uu_x+uv_y)+nu*(u_xx+u_yy))
-                v_star(i,j) = v(i,j) + dt*(-(vv_y+uv_x)+nu*(v_xx+v_yy))
-            enddo
-        enddo
-        
-        ! Debug, save out u_star,v_star,p
-        if (write_star) then
-            frame = frame + 1
-            print "(a,i3,a,i4,a,e16.8)","Writing frame ",frame," during step n=",n," t=",t
-            call output_grid(frame,t,u_star,v_star,p)
-        endif
-        
-        ! ====================================================================
-        ! Step 2: Solve projection poisson problem
-        call bc(u_star,v_star,U_inf)
-        forall(i=1:N_x,j=1:N_y)
-            Q(i,j) = 1.d0/dt * ((u_star(i,j)-u_star(i-1,j)) / dx + (v_star(i,j)-v_star(i,j-1)) / dzeta * F_center(j))
-        end forall
-        ! Solve poisson problem
-        call solve_poisson(p,Q,a,b,cm,cp)
-        
-        ! ====================================================================
-        ! Step 3: Update velocities to end time
-        !**********************************************
-        !***  ADD RHS TO VELOCITY UPDATE FORLUMAS:  ***
-        !**********************************************
-        forall (i=1:N_x,j=1:N_y)
-            u(i,j) = u_star(i,j) - dt/(rho*dx)*(p(i+1,j)-p(i,j))
-            v(i,j) = v_star(i,j) - dt/(rho*dzeta)*(p(i,j+1)-p(i,j))*F_edge(j)
-        end forall
-        
-        ! ====================================================================
-        ! Step 4: Check convergence
-        R = 0.d0
-        do j=1,N_y
-            do i=1,N_x
-                if (R < abs(u(i,j)-u_old(i,j)) .or. R < abs(v(i,j)-v_old(i,j))) then
-                    R = max(R,abs(u(i,j)-u_old(i,j)),abs(v(i,j)-v_old(i,j)))
-                    i_R = i
-                    j_R = j
-                endif
-            enddo
-        enddo
-        
-        ! Finish up loop
-        print "(a,i4,a,i3,a,i3,a,e16.8)","Loop ",n,": (",i_R,",",j_R,") - R = ",R   
-        write (13,"(i4,i4,i4,e16.8)") n,i_R,j_R,R
-        ! Write out u,v,p every n_steps 
-        if (mod(n,n_steps) == 0) then
-            frame = frame + 1
-            call output_grid(frame,t,u,v,p)
-            print "(a,i3,a,i4,a,e16.8)","Writing frame ",frame," during step n=",n," t=",t
-        endif
-        ! Check tolerance
-        if (R < TOLERANCE) then
-            print *, "Convergence reached, R = ",R
-    call output_grid(frame,t,u,v,p)
-    print "(a,i3,a,i4,a,e16.8)","Writing frame ",frame," during step n=",n," t=",t
-            exit
-        endif
-        ! We did not reach our tolerance, iterate again
-        t = t + dt
-    enddo
-    if (R > TOLERANCE) then
-        print "(a,e16.8)","Convergence was never reached, R = ", R
-    endif
-!    call output_grid(frame,t,u,v,p)
-!    print "(a,i3,a,i4,a,e16.8)","Writing frame ",frame," during step n=",n," t=",t
-    close(13)
-end program main
+     ! Velocity and pressure arrays
+     allocate(u(1-mbc:N_x+mbc,1-mbc:N_y+mbc),u_star(1-mbc:N_x+mbc,1-mbc:N_y+mbc))
+     allocate(v(1-mbc:N_x+mbc,1-mbc:N_y+mbc),v_star(1-mbc:N_x+mbc,1-mbc:N_y+mbc))
+     allocate(p(1-mbc:N_x+mbc,1-mbc:N_y+mbc))
+     allocate(u_old(1:N_x,1:N_y),v_old(1:N_x,1:N_y))
+
+     ! Inital conditions
+     u = 0.d0
+     v = 0.d0
+     p = 0.d0
+     dt = CFL * dx / (Re * U_inf)
+     t = 0.d0
+     frame = 0
+
+     nu = 1.d-3
+     rho = 1.d0
 
 
-! ============================================================================
-! Boundary Conditions                                                        
-! ============================================================================
+     ! Output inital condition
+     call output_grid(frame,t,u,v,p)
+     print "(a,i3,a,i4,a,e16.8)","Writing frame ",frame," during step n=",0," t=",t
 
-subroutine bc(u,v,U_inf)
+     ! Open up file to store residual information in
+     open(unit=13, file='residual.dat', status="unknown", action="write")
 
-    use grid_module
+     ! ========================================================================
+     ! Main algorithm loop
+     do n=1,MAX_ITERATIONS
+         ! Store old step for convergence test
+         u_old = u(1:N_x,1:N_y)
+         v_old = v(1:N_x,1:N_y)
 
-    implicit none
-    
-    ! Input/Output arguments
-    double precision, intent(in) :: U_inf
-    double precision, intent(inout) :: u(1-mbc:N_x+mbc,1-mbc:N_y+mbc)
-    double precision, intent(inout) :: v(1-mbc:N_x+mbc,1-mbc:N_y+mbc)
+         ! ====================================================================
+         ! Apply BC  V = x, U = o, P = +
+         call bc(u,v,U_inf,t)
 
-    ! Locals
-    integer :: i,j
-    
-    ! Lower Boundary         Upper Boundary     
-    !  i,1  i,1    |          
-    !   x    +     x i,1     |   o   | 
-    !   |          |         |i,N_y+1|
-    ! -------o--------       x   +   x 
-    !  |    i,0    |         |       |
-    !  x     +     x        -|---o---|-
-    !  |    i,0   i,0        | i,N_y |
-    !  |           |         x   +   x   
-    !                               i,N_y
-    ! Wall                  Free shear
-    ! u(i,0) = -u(i,1)      u(i,N_y+1) = u(i,N_y)
-    ! v(i,0) = 0.d0         v(i,N_y+1) = v(i,N_y)
-    ! p(i,0) = p(i,1)       p(i,N_y+1) = 0.d0
-    forall(i=N_x/2:N_x+1)
-        u(i,0) = -u(i,1)
-        v(i,0) = 0.d0     
-        u(i,N_y+1) = u(i,N_y)
-        v(i,N_y+1) = v(i,N_y)
-    end forall
+         ! ====================================================================
+         ! Step 1: Update velocity to intermediate step
+         ! Calculate fluxes at each boundary
+         !
+         !  U-Fluxes
+         !                                   |   u   |
+         !         FUY_i,j                i,j| i,j+1 |i+1,j
+         ! -------|---o---|-------    -------v-------v-------
+         !        |       |            i-1,j |  i,j  |  i+1,j
+         !    FUX_i,j    FUX_i+1,j       u   |   u   |   u
+         !        |       |                  |       |
+         ! -------|---o---|-------    -------v-------v-------
+         !         FUY_i,j-1            i,j-1| i,j-1 | i+1,j-1
+         !                                   |   u   |  
+         !  
+         !  V-Fluxes
+         !                                   |   v   |
+         !         FVY_i,j            i-1,j+1| i,j+1 |i,j+1
+         ! -------|---o---|-------    -------u---o---u-------
+         !        |       |            i-1,j |  i,j  |  i+1,j
+         !    FUY_i-1,j  FUY_i,j         v   o   v   o   v
+         !        |       |                  |       |
+         ! -------|---o---|-------    -------u---o---u-------
+         !         FVY_i,j-1            i-1,j| i,j-1 |i,j
+         !                                   |   v   |    
+         forall (i=1:N_x+1,j=0:N_y+1) Flux_ux(i,j) = (u(i-1,j)+u(i,j))**2 / 4.d0
+         forall (i=0:N_x,j=0:N_y) Flux_uy(i,j) = (u(i,j)+u(i,j+1)) * (v(i+1,j)+v(i,j)) / 4.d0
+         forall (i=0:N_x+1,j=0:N_y) Flux_vy(i,j) = (v(i,j+1) + v(i,j))**2 / 4.d0
 
-    !Adding first half of domain with free shear BCs
-    forall(i=0:N_x/2)
-        u(i,0) = u(i,1)
-        v(i,0) = v(i,1)     
-        u(i,N_y+1) = u(i,N_y)
-        v(i,N_y+1) = v(i,N_y)
-    end forall
+         do j=1,N_y
+             do i=1,N_x
 
-    ! Left Boundaries
-    !   x 0,j  |      x 1,j             
-    !  0,j     |                        u(0,j) = U_inf
-    !   +      o 0,j  + 1,j   o 1,j     v(0,j) = 0.d0
-    !          |                        p(0,j) = p(1,j)  (P_x = 0)
-    ! Right Boundaries (outflow)
-    !     x N_x,j   |         x N_x+1,j             u(N_x+1,j) = 2 u(N_x,j) - u(N_x-1,j)
-    !               |                               v(N_x+1,j) = 2 v(N_x,j) - v(N_x-1,j)
-    !     + N_x,j   o N_x,j   + N_x+1,j  o N_x+1,j  p(N_x+1,j) = p(N_x,j)
-    !               |
-    forall(j=1:N_y+1)
-        u(0,j) = U_inf
+ !********************************************
+ !***  ADD RHS TO THE FOLLOWING FORMULAS:  ***
+ !********************************************
+
+ !***  Source of formulas are CDS  derivatives from Lecture 5 pg 8 notes ***
+                 ! Advective terms
+                 uu_x = 1.d0/dx*(Flux_ux(i+1,j)-Flux_ux(i,j))
+                 uv_y = F_center(j)/dzeta*(Flux_uy(i,j)-Flux_uy(i,j-1))
+
+                 uv_x = 1.d0/dx*(Flux_uy(i,j)-Flux_uy(i-1,j))
+                 vv_y = F_edge(j)/dzeta*(Flux_vy(i,j)-Flux_vy(i,j-1))
+
+                 ! Diffusive terms
+
+                 !!!CHECK THAT FLUXes USED CORRECTLY AND IF F() SHOULD BE USED INSTEAD!!!
+
+                 u_xx = 1.d0/dx**2*(u(i+1,j)-2*u(i,j)+u(i-1,j))
+                 u_yy = F_center(j)/dzeta**2*(F_edge(j)*(u(i,j+1)-u(i,j))-F_edge(j-1)*(u(i,j)-u(i,j-1)))
+                 v_xx = 1.d0/dx**2*(v(i+1,j)-2*v(i,j)+v(i-1,j))
+                 v_yy = F_edge(j)/dzeta**2*(F_center(j+1)*(v(i,j+1)-v(i,j))-F_center(j)*(v(i,j)-v(i,j-1)))
+
+                 ! Update to u* and v* value
+                 u_star(i,j) = u(i,j) + dt*(-(uu_x+uv_y)+nu*(u_xx+u_yy))
+                 v_star(i,j) = v(i,j) + dt*(-(vv_y+uv_x)+nu*(v_xx+v_yy))
+             enddo
+         enddo
+
+         ! Debug, save out u_star,v_star,p
+         if (write_star) then
+             frame = frame + 1
+             print "(a,i3,a,i4,a,e16.8)","Writing frame ",frame," during step n=",n," t=",t
+             call output_grid(frame,t,u_star,v_star,p)
+         endif
+
+         ! ====================================================================
+         ! Step 2: Solve projection poisson problem
+         call bc(u_star,v_star,U_inf,t)
+         forall(i=1:N_x,j=1:N_y)
+             Q(i,j) = 1.d0/dt * ((u_star(i,j)-u_star(i-1,j)) / dx + (v_star(i,j)-v_star(i,j-1)) / dzeta * F_center(j))
+         end forall
+         ! Solve poisson problem
+         call solve_poisson(p,Q,a,b,cm,cp)
+
+         ! ====================================================================
+         ! Step 3: Update velocities to end time
+         !**********************************************
+         !***  ADD RHS TO VELOCITY UPDATE FORLUMAS:  ***
+         !**********************************************
+         forall (i=1:N_x,j=1:N_y)
+             u(i,j) = u_star(i,j) - dt/(rho*dx)*(p(i+1,j)-p(i,j))
+             v(i,j) = v_star(i,j) - dt/(rho*dzeta)*(p(i,j+1)-p(i,j))*F_edge(j)
+         end forall
+
+         ! ====================================================================
+         ! Step 4: Check convergence
+         R = 0.d0
+         do j=1,N_y
+             do i=1,N_x
+                 if (R < abs(u(i,j)-u_old(i,j)) .or. R < abs(v(i,j)-v_old(i,j))) then
+                     R = max(R,abs(u(i,j)-u_old(i,j)),abs(v(i,j)-v_old(i,j)))
+                     i_R = i
+                     j_R = j
+                 endif
+             enddo
+         enddo
+
+         ! Finish up loop
+         print "(a,i4,a,i3,a,i3,a,e16.8)","Loop ",n,": (",i_R,",",j_R,") - R = ",R   
+         write (13,"(i4,i4,i4,e16.8)") n,i_R,j_R,R
+         ! Write out u,v,p every n_steps 
+         if (mod(n,n_steps) == 0) then
+             frame = frame + 1
+             call output_grid(frame,t,u,v,p)
+             print "(a,i3,a,i4,a,e16.8)","Writing frame ",frame," during step n=",n," t=",t
+         endif
+         ! Check tolerance
+         if (R < TOLERANCE) then
+             print *, "Convergence reached, R = ",R
+     call output_grid(frame,t,u,v,p)
+     print "(a,i3,a,i4,a,e16.8)","Writing frame ",frame," during step n=",n," t=",t
+             exit
+         endif
+         ! We did not reach our tolerance, iterate again
+         t = t + dt
+     enddo
+     if (R > TOLERANCE) then
+         print "(a,e16.8)","Convergence was never reached, R = ", R
+     endif
+ !    call output_grid(frame,t,u,v,p)
+ !    print "(a,i3,a,i4,a,e16.8)","Writing frame ",frame," during step n=",n," t=",t
+     close(13)
+ end program main
+
+
+ ! ============================================================================
+ ! Boundary Conditions                                                        
+ ! ============================================================================
+
+ subroutine bc(u,v,U_inf,t)
+
+     use grid_module
+
+     implicit none
+
+     ! Input/Output arguments
+     double precision, intent(in) :: U_inf
+     double precision, intent(inout) :: u(1-mbc:N_x+mbc,1-mbc:N_y+mbc)
+     double precision, intent(inout) :: v(1-mbc:N_x+mbc,1-mbc:N_y+mbc)
+     double precision, intent(in) :: t
+
+     ! Locals
+     integer :: i,j
+     real(kind=8) :: omega, u_0
+     ! Lower Boundary         Upper Boundary     
+     !  i,1  i,1    |          
+     !   x    +     x i,1     |   o   | 
+     !   |          |         |i,N_y+1|
+     ! -------o--------       x   +   x 
+     !  |    i,0    |         |       |
+     !  x     +     x        -|---o---|-
+     !  |    i,0   i,0        | i,N_y |
+     !  |           |         x   +   x   
+     !                               i,N_y
+     ! Wall                  Free shear
+     ! u(i,0) = -u(i,1)      u(i,N_y+1) = u(i,N_y)
+     ! v(i,0) = 0.d0         v(i,N_y+1) = v(i,N_y)
+     ! p(i,0) = p(i,1)       p(i,N_y+1) = 0.d0
+     omega = 10.
+     u_0 = 1.
+
+     forall(i=0:N_x+1)
+ !        u(i,0) = -u(i,1)
+         u(i,0) = u_0*cos(omega*t)
+         v(i,0) = 0.d0     
+         u(i,N_y+1) = u(i,N_y)
+         v(i,N_y+1) = v(i,N_y)
+     end forall
+
+     !Adding first half of domain with free shear BCs
+     !forall(i=0:N_x/2)
+     !    u(i,0) = u(i,1)
+     !    v(i,0) = v(i,1)     
+     !    u(i,N_y+1) = u(i,N_y)
+     !    v(i,N_y+1) = v(i,N_y)
+     !end forall
+
+     ! Left Boundaries
+     !   x 0,j  |      x 1,j             
+     !  0,j     |                        u(0,j) = U_inf
+     !   +      o 0,j  + 1,j   o 1,j     v(0,j) = 0.d0
+     !          |                        p(0,j) = p(1,j)  (P_x = 0)
+     ! Right Boundaries (outflow)
+     !     x N_x,j   |         x N_x+1,j             u(N_x+1,j) = 2 u(N_x,j) - u(N_x-1,j)
+     !               |                               v(N_x+1,j) = 2 v(N_x,j) - v(N_x-1,j)
+     !     + N_x,j   o N_x,j   + N_x+1,j  o N_x+1,j  p(N_x+1,j) = p(N_x,j)
+     !               |
+     forall(j=1:N_y+1)
+        u(0,j) = 0.d0
         v(0,j) = 0.d0
 !         u(N_x+1,j) = 2.d0*u(N_x,j) - u(N_x-1,j)
         u(N_x+1,j) = u(N_x,j)
