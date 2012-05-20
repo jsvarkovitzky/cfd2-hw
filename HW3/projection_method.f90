@@ -204,7 +204,7 @@ program main
  !!!!!!!!!!!!!!!!!!
 
      N_x=200  !Number of grid points in x-direction
-     N_y=40   !Number of grid points in y-direction
+     N_y=80   !Number of grid points in y-direction
      L_x=10.0 !Length of box in x-direction
      L_y=4.0  !Length of box in y-direction
      n_steps=100 !Interval that u,v and p are printed to UVP.dat
@@ -368,7 +368,7 @@ program main
          enddo
 
          ! Finish up loop
-         print "(a,i4,a,i3,a,i3,a,e16.8)","Loop ",n,": (",i_R,",",j_R,") - R = ",R   
+         print "(a,i7,a,i3,a,i3,a,e16.8)","Loop ",n,": (",i_R,",",j_R,") - R = ",R   
          write (13,"(i4,i4,i4,e16.8)") n,i_R,j_R,R
          ! Write out u,v,p every n_steps 
          if (mod(n,n_steps) == 0) then

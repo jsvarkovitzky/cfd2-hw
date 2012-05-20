@@ -30,7 +30,7 @@ def makeFrames(uvp,i,j):
     for frameno in range(0,nframes):
         if frameno == nframes-1:
             plotFrame(uvp,frameno,framenos)
-
+            
 ################
 ## Plot Frame ##
 ################
@@ -59,7 +59,7 @@ def plotFrame(uvp,k,framenos):
 
 
     if k == nframes-1:
-
+                
         figure(1)
         clf()
         title('X Velocity Component')
@@ -69,9 +69,9 @@ def plotFrame(uvp,k,framenos):
         colorbar()
         axis([4,10,0,0.4])
         savefig('u_full.png')
-        axis([4.8,8,0,0.2])
+        axis([4.8,8,0,0.1])
         savefig('u_zoom.png')
-
+        """
         figure(2)
         clf()
         title('Y Velocity Component')
@@ -119,7 +119,24 @@ def plotFrame(uvp,k,framenos):
         axis([0,8,-0.05,0.1])
         legend(("Computational Solution","Blasius Solution"),loc='lower right')
         savefig('blasius_v.png')
-
+        """
+        figure(10)
+        clf()
+        omega = 10
+        U = 1
+        nu = 1#10**(-3)
+        t = 5
+        yE = arange(0,81)
+        uExact = U*exp(-1*yE*sqrt(omega/(2*nu)))#*cos(omega*t-yE*sqrt(omega/(2*nu)))
+        title('u(y)')
+        xlabel('u(y)')
+        ylabel('y')
+        print "the shapes of y and UExact are: %r %s"%(shape(yE),shape(uExact))
+        print uExact
+        plot(u[:,10],'b')
+        plot(zeros(80),'k--')
+        plot(uExact,yE,'g')
+        axis([0,80,-0.001,0.001])
     return(x)
 
 
@@ -167,7 +184,7 @@ def readInUVP(i,j,fname):
 def skinFric():
     
     ic = 200
-    jc = 40
+    jc = 80
     
     im = 300
     jm = 60
@@ -202,7 +219,7 @@ close('all')
 
 fname = '_output/UVP.dat'
 i = 200
-j = 40
+j = 80
 nu = 1e-3
 print "Reading in %s" %fname
 uvp = readIn(i,j,fname)
