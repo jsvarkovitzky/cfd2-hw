@@ -147,7 +147,7 @@ program main
     
     ! ========================================================================
     ! Solver parameters
-    integer, parameter :: MAX_ITERATIONS = 1000000
+    integer, parameter :: MAX_ITERATIONS = 10000
     double precision, parameter :: TOLERANCE = 1.d-6, CFL = 0.8d0
     logical, parameter :: write_star = .false.
     integer :: n_steps
@@ -165,10 +165,11 @@ program main
     ! ========================================================================
     ! Locals
     character*20 :: arg
-    integer :: i,j,n,m,frame,i_R,j_R
+    integer :: i,j,n,m,frame,i_R,j_R,jj
     double precision :: R,t,dt,a
     double precision, allocatable :: Flux_ux(:,:),Flux_uy(:,:),Flux_vy(:,:)
-    double precision :: uu_x,uv_y,uv_x,vv_y,u_xx,u_yy,v_xx,v_yy
+    double precision :: uu_x,uv_y,uv_x,vv_y,u_xx,u_yy,v_xx,v_yy,mu,tau,kappa,nuTi,nuTo,y,u_x,u_y,v_y,p_x,delta,delta_nu,yp
+    double precision :: tau_w,k,lm,alpha,Ap
     double precision, allocatable :: Q(:,:),b(:),cp(:),cm(:)
     ! ========================================================================
     
@@ -207,7 +208,7 @@ program main
     N_y=60   !Number of grid points in y-direction
     L_x=10.0 !Length of box in x-direction
     L_y=4.0  !Length of box in y-direction
-    n_steps=100000 !Interval that u,v and p are printed to UVP.dat
+    n_steps=1000 !Interval that u,v and p are printed to UVP.dat
     Re=100.0   !Reynolds number
 
     print *,"Running blasius with following parameters: "
@@ -249,7 +250,7 @@ program main
 
     nu = 1.d-3
     rho = 1.d0
-
+    mu = nu/rho
 
     ! Output inital condition
     call output_grid(frame,t,u,v,p)
@@ -306,7 +307,10 @@ program main
 !********************************************
 
 !***  Source of formulas are CDS  derivatives from Lecture 5 pg 8 notes ***
-                ! Advective terms
+
+
+
+               ! Advective terms
                 uu_x = 1.d0/dx*(Flux_ux(i+1,j)-Flux_ux(i,j))
                 uv_y = F_center(j)/dzeta*(Flux_uy(i,j)-Flux_uy(i,j-1))
                 
@@ -321,6 +325,29 @@ program main
                 u_yy = F_center(j)/dzeta**2*(F_edge(j)*(u(i,j+1)-u(i,j))-F_edge(j-1)*(u(i,j)-u(i,j-1)))
                 v_xx = 1.d0/dx**2*(v(i+1,j)-2*v(i,j)+v(i-1,j))
                 v_yy = F_edge(j)/dzeta**2*(F_center(j+1)*(v(i,j+1)-v(i,j))-F_center(j)*(v(i,j)-v(i,j-1)))
+
+               ! Calculate nu_T at each point to be used in u*,v* calculations
+                k = 0.40
+                y = dzeta*j
+                tau = mu 
+                p_x = (p(i-1,j)-p(i+1,j))/(2*dx)
+                u_y = (u(i,j-1)-u(i,j+1)/(2*dzeta)
+                u_x = (u(i-1,j)-u(i+1,j))/(2*dx)
+                !Calculate delta:
+                do j=1,N_y 
+                   if (u(i,jj)>u(0,jj)) then
+                      delta = jj*dzeta
+                      EXIT
+                   endif
+                enddo
+                tau_w = mu*(u(i,0)-u(i,2)/(2*dzeta)
+                delta_nu = nu*sqrt(rho/tau_w)
+                Ap=26*(1+y*p_x/(rho*u(i,j)*tau))
+                yp = y/delta
+                lm = k*y*(1-exp(-yp/Ap))
+                nuTi = lm**2*(u_x**2+u_y**2)**(1/2)
+                nuTo = alpha*u(0,j)*delta_nu*(1+5.5*(y/delta)**6)**(-1)
+
                 
                 ! Update to u* and v* value
                 u_star(i,j) = u(i,j) + dt*(-(uu_x+uv_y)+nu*(u_xx+u_yy))
@@ -491,7 +518,7 @@ subroutine solve_poisson(P,Q,a,b,cm,cp)
         end forall
         forall (i=0:N_x+1)
             P(i,0) = P(i,1)        ! Bottom wall
-            P(i,N_y+1) = 0.d0      ! Free stream
+           P(i,N_y+1) = 0.d0      ! Free stream
         end forall
         do j=1,N_y
             do i=1,N_x
