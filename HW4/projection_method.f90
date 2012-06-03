@@ -169,8 +169,8 @@ program main
     double precision :: R,t,dt,a
     double precision, allocatable :: Flux_ux(:,:),Flux_uy(:,:),Flux_vy(:,:)
     double precision :: uu_x,uv_y,uv_x,vv_y,u_xx,u_yy,v_xx,v_yy,mu,tau,kappa,nuTi,nuTo,y,u_x,u_y,v_y,p_x,delta,delta_nu,yp
-    double precision :: tau_w,k,lm,alpha,Ap,delta_nu_star,u_tau
-    double precision, allocatable :: Q(:,:),b(:),cp(:),cm(:)
+    double precision :: tau_w,k,lm,alpha,Ap,delta_nu_star,u_tau,nu_diff_old,nu_diff_new,nu_bool
+    double precision, allocatable :: Q(:,:),b(:),cp(:),cm(:),nu_T(:)
     ! ========================================================================
     
     ! Get command line arguments
@@ -301,9 +301,77 @@ program main
     
         do i=1,N_x
            !Calculate delta and nu_* values for entire y column here
+               ! Calculate nu_T at each point to be used in u*,v* calculations
+           k = 0.40
+           alpha = 0.0168
+           
 
+           !Calculate boundary thickness at this particular x:
+           do jj=1,N_y 
+              if (u(i,jj)>u(0,jj)) then
+                 delta = y_center(jj)
+                 EXIT
+              endif
+           enddo
 
+           !Integrate to get delta_nu_star
+           delta_nu_star = 0.d0
+           do jj=1,N_y
+              if (y_center(jj)<delta) then
+                 delta_nu_star = delta_nu_star + (1-u(i,jj)/u(0,jj))*(y_center(jj)-y_center(jj-1))
+              endif
+           enddo
 
+           nu_diff_old = 0.d0
+           nu_diff_new = 0.d0
+           nu_bool = 0.d0
+           do jj=1,N_y
+              if (delta <0.001d0) then
+                 !This case is before the flow reaches the plate and no additional nu is needed
+                 nu_T(jj) = 0
+              else
+                 !This case is over the plate where nu_T needs to be computed
+
+                 p_x = (p(i+1,jj)-p(i-1,jj))/(2*dx)
+                 u_y = (u(i,jj+1)-u(i,jj-1)/(y_center(jj+1)-y_center(jj-1)))
+                 u_x = (u(i+1,jj)-u(i-1,jj))/(2*dx)
+
+                 tau = mu * u_y
+
+                 tau_w = mu*((u(i,2)-u(i,0))/(y_center(2)-y_center(0)))
+                 u_tau = sqrt(tau_w/rho)
+                 delta_nu = nu/u_tau
+                 Ap=26*(1+y_center(j)*p_x/(rho*u_tau**2))**(-1/2)
+                 yp = 0.d0
+                 nuTo = 0.d0
+                 yp = y_center(j)/delta
+                 nuTo = alpha*u(0,j)*delta_nu_star*(1+5.5*(y/delta)**6)**(-1)
+                 lm = k*y_center(j)*(1-exp(-yp/Ap))
+                 nuTi = lm**2*(u_x**2+u_y**2)**(1/2)
+
+                 nu_diff_new = nuTo-nuTi
+                 
+                 if (nu_diff_new*nu_diff_old < 0) then
+                    nu_bool = 1.d0
+                 endif
+
+                 !use nu_bool to set nu_T
+                 if (nu_bool == 0.d0) then
+                    nu_T(jj) = nuTi
+                 else
+                    nu_T(jj) = nuTo
+                 endif
+                 nu_diff_old = nu_diff_new
+              endif
+           enddo
+           
+
+           
+           
+           
+           
+           
+           
            do j=1,N_y
 
 !********************************************
@@ -330,42 +398,6 @@ program main
                 v_xx = 1.d0/dx**2*(v(i+1,j)-2*v(i,j)+v(i-1,j))
                 v_yy = F_edge(j)/dzeta**2*(F_center(j+1)*(v(i,j+1)-v(i,j))-F_center(j)*(v(i,j)-v(i,j-1)))
 
-               ! Calculate nu_T at each point to be used in u*,v* calculations
-                k = 0.40
-                alpha = 0.0168
-
-                p_x = (p(i+1,j)-p(i-1,j))/(2*dx)
-                u_y = (u(i,j+1)-u(i,j-1)/(y_center(j+1)-y_center(j-1)))
-                u_x = (u(i+1,j)-u(i-1,j))/(2*dx)
-                tau = mu * u_y
-                
-                !Calculate boundary thickness:
-                do jj=1,N_y 
-                   if (u(i,jj)>u(0,jj)) then
-                      delta = y_center(jj)
-                      EXIT
-                   endif
-                enddo
-                !Integrate to get delta_nu_star
-                delta_nu_star = 0.d0
-                do jj=1,N_y
-                   if (y_center(jj)<delta) then
-                      delta_nu_star = delta_nu_star + (1-u(i,jj)/u(0,jj))*(y_center(jj)-y_center(jj-1))
-                   endif
-                enddo
-                
-                tau_w = mu*((u(i,2)-u(i,0))/(y_center(2)-y_center(0)))
-                u_tau = sqrt(tau_w/rho)
-                delta_nu = nu/u_tau
-                Ap=26*(1+y_center(j)*p_x/(rho*u_tau**2))**(-1/2)
-                yp = 0.d0
-                nuTo = 0.d0
-                if (delta > 0.01d0) then
-                   yp = y_center(j)/delta
-                   nuTo = alpha*u(0,j)*delta_nu_star*(1+5.5*(y/delta)**6)**(-1)
-                endif
-                lm = k*y_center(j)*(1-exp(-yp/Ap))
-                nuTi = lm**2*(u_x**2+u_y**2)**(1/2)
 !                print *, "delta is = ", delta
 !                print *, "mu is = ", mu
 !                print *, "tau_w is = ", tau_w
@@ -376,12 +408,12 @@ program main
 !                print *, "delta_nu_star is = ", delta_nu_star
 !                print *, "NuTi is = ", nuTi
 !                print *, "NuTo is = ", nuTo
-                if (y_center(jj)>delta) then
-                   nu = nu + nuTo
-                else
-                   nu = nu + nuTi
-                endif
-
+!                if (y_center(jj)>delta) then
+!                   nu = nu + nuTo
+!                else
+!                   nu = nu + nuTi
+!                endif
+                nu = nu + nu_T(j)
 
                 ! Update to u* and v* value
                 u_star(i,j) = u(i,j) + dt*(-(uu_x+uv_y)+nu*(u_xx+u_yy))
