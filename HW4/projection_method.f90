@@ -148,7 +148,7 @@ program main
     ! ========================================================================
     ! Solver parameters
     integer, parameter :: MAX_ITERATIONS = 10000
-    double precision, parameter :: TOLERANCE = 1.d-6, CFL = 0.8d0
+    double precision, parameter :: TOLERANCE = 1.d-6, CFL = 0.08d0
     logical, parameter :: write_star = .false.
     integer :: n_steps
 
@@ -169,7 +169,7 @@ program main
     double precision :: R,t,dt,a
     double precision, allocatable :: Flux_ux(:,:),Flux_uy(:,:),Flux_vy(:,:)
     double precision :: uu_x,uv_y,uv_x,vv_y,u_xx,u_yy,v_xx,v_yy,mu,tau,kappa,nuTi,nuTo,y,u_x,u_y,v_y,p_x,delta,delta_nu,yp
-    double precision :: tau_w,k,lm,alpha,Ap
+    double precision :: tau_w,k,lm,alpha,Ap,delta_nu_star,u_tau
     double precision, allocatable :: Q(:,:),b(:),cp(:),cm(:)
     ! ========================================================================
     
@@ -328,27 +328,57 @@ program main
 
                ! Calculate nu_T at each point to be used in u*,v* calculations
                 k = 0.40
-                y = dzeta*j
-                tau = mu 
-                p_x = (p(i-1,j)-p(i+1,j))/(2*dx)
-                u_y = (u(i,j-1)-u(i,j+1)/(2*dzeta)
-                u_x = (u(i-1,j)-u(i+1,j))/(2*dx)
+                alpha = 0.0168
+                !y = y_center(j)
+                
+                p_x = (p(i+1,j)-p(i-1,j))/(2*dx)
+                u_y = (u(i,j+1)-u(i,j-1)/(y_center(j+1)-y_center(j-1)))
+                u_x = (u(i+1,j)-u(i-1,j))/(2*dx)
+                tau = mu * u_y
+                
                 !Calculate delta:
-                do j=1,N_y 
+                do jj=1,N_y 
                    if (u(i,jj)>u(0,jj)) then
-                      delta = jj*dzeta
+                      delta = y_center(jj)
                       EXIT
                    endif
                 enddo
-                tau_w = mu*(u(i,0)-u(i,2)/(2*dzeta)
-                delta_nu = nu*sqrt(rho/tau_w)
-                Ap=26*(1+y*p_x/(rho*u(i,j)*tau))
-                yp = y/delta
+                !Integrate to get delta_nu_star
+                delta_nu_star = 0.d0
+                do jj=1,N_y
+                   if (y_center(jj)<delta) then
+                      delta_nu_star = delta_nu_star + (1-u(i,jj)/U_inf)*(y_center(jj)-y_center(jj-1))
+                   endif
+                enddo
+                
+                tau_w = mu*(u(i,2)-u(i,0)/(y_center(2)-y_center(0)))
+                u_tau = sqrt(tau_w/rho)
+                delta_nu = nu/u_tau
+                Ap=26*(1+y*p_x/(rho*u_tau**2))
+                yp = 0.d0
+                nuTo = 0.d0
+                if (delta > 0.0d0) then
+                   yp = y/delta
+                   nuTo = alpha*u(0,j)*delta_nu_star*(1+5.5*(y/delta)**6)**(-1)
+                endif
                 lm = k*y*(1-exp(-yp/Ap))
                 nuTi = lm**2*(u_x**2+u_y**2)**(1/2)
-                nuTo = alpha*u(0,j)*delta_nu*(1+5.5*(y/delta)**6)**(-1)
+!                print *, "mu is = ", mu
+!                print *, "tau_w is = ", tau_w
+!                print *, "rho is = ", rho
+!                print *, "delta_nu is = ", delta_nu
+!                print *, "rho/tau_w is = ", rho/tau_w
+!                print *, "delta is = ", delta
+!                print *, "delta_nu_star is = ", delta_nu_star
+!                print *, "NuTi is = ", nuTi
+!                print *, "NuTo is = ", nuTo
+                if (u(i,jj)>delta) then
+                   nu = nu + nuTo
+                else
+                   nu = nu + nuTi
+                endif
 
-                
+
                 ! Update to u* and v* value
                 u_star(i,j) = u(i,j) + dt*(-(uu_x+uv_y)+nu*(u_xx+u_yy))
                 v_star(i,j) = v(i,j) + dt*(-(vv_y+uv_x)+nu*(v_xx+v_yy))
@@ -454,9 +484,17 @@ subroutine bc(u,v,U_inf)
     ! u(i,0) = -u(i,1)      u(i,N_y+1) = u(i,N_y)
     ! v(i,0) = 0.d0         v(i,N_y+1) = v(i,N_y)
     ! p(i,0) = p(i,1)       p(i,N_y+1) = 0.d0
-    forall(i=0:N_x+1)
+    forall(i=N_x/2:N_x+1)
         u(i,0) = -u(i,1)
         v(i,0) = 0.d0     
+        u(i,N_y+1) = u(i,N_y)
+        v(i,N_y+1) = v(i,N_y)
+    end forall
+
+    !Adding first half of domain with free shear BCs
+    forall(i=0:N_x/2)
+        u(i,0) = u(i,1)
+        v(i,0) = v(i,1)     
         u(i,N_y+1) = u(i,N_y)
         v(i,N_y+1) = v(i,N_y)
     end forall
