@@ -299,8 +299,12 @@ program main
         forall (i=0:N_x,j=0:N_y) Flux_uy(i,j) = (u(i,j)+u(i,j+1)) * (v(i+1,j)+v(i,j)) / 4.d0
         forall (i=0:N_x+1,j=0:N_y) Flux_vy(i,j) = (v(i,j+1) + v(i,j))**2 / 4.d0
     
-        do j=1,N_y
-            do i=1,N_x
+        do i=1,N_x
+           !Calculate delta and nu_* values for entire y column here
+
+
+
+           do j=1,N_y
 
 !********************************************
 !***  ADD RHS TO THE FOLLOWING FORMULAS:  ***
@@ -329,14 +333,13 @@ program main
                ! Calculate nu_T at each point to be used in u*,v* calculations
                 k = 0.40
                 alpha = 0.0168
-                !y = y_center(j)
-                
+
                 p_x = (p(i+1,j)-p(i-1,j))/(2*dx)
                 u_y = (u(i,j+1)-u(i,j-1)/(y_center(j+1)-y_center(j-1)))
                 u_x = (u(i+1,j)-u(i-1,j))/(2*dx)
                 tau = mu * u_y
                 
-                !Calculate delta:
+                !Calculate boundary thickness:
                 do jj=1,N_y 
                    if (u(i,jj)>u(0,jj)) then
                       delta = y_center(jj)
@@ -347,22 +350,23 @@ program main
                 delta_nu_star = 0.d0
                 do jj=1,N_y
                    if (y_center(jj)<delta) then
-                      delta_nu_star = delta_nu_star + (1-u(i,jj)/U_inf)*(y_center(jj)-y_center(jj-1))
+                      delta_nu_star = delta_nu_star + (1-u(i,jj)/u(0,jj))*(y_center(jj)-y_center(jj-1))
                    endif
                 enddo
                 
-                tau_w = mu*(u(i,2)-u(i,0)/(y_center(2)-y_center(0)))
+                tau_w = mu*((u(i,2)-u(i,0))/(y_center(2)-y_center(0)))
                 u_tau = sqrt(tau_w/rho)
                 delta_nu = nu/u_tau
-                Ap=26*(1+y*p_x/(rho*u_tau**2))
+                Ap=26*(1+y_center(j)*p_x/(rho*u_tau**2))**(-1/2)
                 yp = 0.d0
                 nuTo = 0.d0
-                if (delta > 0.0d0) then
-                   yp = y/delta
+                if (delta > 0.01d0) then
+                   yp = y_center(j)/delta
                    nuTo = alpha*u(0,j)*delta_nu_star*(1+5.5*(y/delta)**6)**(-1)
                 endif
-                lm = k*y*(1-exp(-yp/Ap))
+                lm = k*y_center(j)*(1-exp(-yp/Ap))
                 nuTi = lm**2*(u_x**2+u_y**2)**(1/2)
+!                print *, "delta is = ", delta
 !                print *, "mu is = ", mu
 !                print *, "tau_w is = ", tau_w
 !                print *, "rho is = ", rho
@@ -372,7 +376,7 @@ program main
 !                print *, "delta_nu_star is = ", delta_nu_star
 !                print *, "NuTi is = ", nuTi
 !                print *, "NuTo is = ", nuTo
-                if (u(i,jj)>delta) then
+                if (y_center(jj)>delta) then
                    nu = nu + nuTo
                 else
                    nu = nu + nuTi
