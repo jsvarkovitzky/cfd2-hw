@@ -147,8 +147,8 @@ program main
     
     ! ========================================================================
     ! Solver parameters
-    integer, parameter :: MAX_ITERATIONS = 10000
-    double precision, parameter :: TOLERANCE = 1.d-6, CFL = 0.08d0
+    integer, parameter :: MAX_ITERATIONS = 100000
+    double precision, parameter :: TOLERANCE = 1.d-8, CFL = 36000.d0
     logical, parameter :: write_star = .false.
     integer :: n_steps
 
@@ -169,8 +169,8 @@ program main
     double precision :: R,t,dt,a
     double precision, allocatable :: Flux_ux(:,:),Flux_uy(:,:),Flux_vy(:,:)
     double precision :: uu_x,uv_y,uv_x,vv_y,u_xx,u_yy,v_xx,v_yy,mu,tau,kappa,nuTi,nuTo,y,u_x,u_y,v_y,p_x,delta,delta_nu,yp
-    double precision :: tau_w,k,lm,alpha,Ap,delta_nu_star,u_tau,nu_diff_old,nu_diff_new,nu_bool
-    double precision, allocatable :: Q(:,:),b(:),cp(:),cm(:),nu_T(:)
+    double precision :: tau_w,k,lm,alpha,Ap,delta_nu_star,u_tau,nu_diff_old,nu_diff_new,nu_bool,v_x
+    double precision, allocatable :: Q(:,:),b(:),cp(:),cm(:),nu_T(:,:)
     ! ========================================================================
     
     ! Get command line arguments
@@ -208,8 +208,8 @@ program main
     N_y=60   !Number of grid points in y-direction
     L_x=10.0 !Length of box in x-direction
     L_y=4.0  !Length of box in y-direction
-    n_steps=1000 !Interval that u,v and p are printed to UVP.dat
-    Re=100.0   !Reynolds number
+    n_steps=10000 !Interval that u,v and p are printed to UVP.dat
+    Re=10000.0   !Reynolds number
 
     print *,"Running blasius with following parameters: "
     print "(a,i3,a,i3,a)"," (N_x,N_y) = (",N_x,",",N_y,")"
@@ -225,7 +225,7 @@ program main
     allocate(Flux_vy(0:N_x+1,0:N_y))
     allocate(Q(1:N_x,1:N_y))
     allocate(b(1:N_y),cp(1:N_y),cm(1:N_y))
-    
+    allocate(Nu_T(1:N_x,1:N_y))
     ! Calculate matrix coefficients for Poisson solve
     a = 1.d0 / dx**2
     forall (j=1:N_y)
@@ -241,7 +241,14 @@ program main
     allocate(u_old(1:N_x,1:N_y),v_old(1:N_x,1:N_y))
     
     ! Inital conditions
-    u = U_inf
+    do i=0,N_x+1
+       do j=0,N_y+1
+          u(i,j) = u_inf!*2.0*y_center(j)
+       enddo
+    enddo
+
+
+    !u = 0.d0
     v = 0.d0
     p = 0.d0
     dt = CFL * dx / (Re * U_inf)
@@ -298,14 +305,10 @@ program main
         forall (i=1:N_x+1,j=0:N_y+1) Flux_ux(i,j) = (u(i-1,j)+u(i,j))**2 / 4.d0
         forall (i=0:N_x,j=0:N_y) Flux_uy(i,j) = (u(i,j)+u(i,j+1)) * (v(i+1,j)+v(i,j)) / 4.d0
         forall (i=0:N_x+1,j=0:N_y) Flux_vy(i,j) = (v(i,j+1) + v(i,j))**2 / 4.d0
-    
-        do i=1,N_x
-           !Calculate delta and nu_* values for entire y column here
-               ! Calculate nu_T at each point to be used in u*,v* calculations
-           k = 0.40
-           alpha = 0.0168
-           
 
+        k = 0.40
+        alpha = 0.0168
+        do i=1,N_x
            !Calculate boundary thickness at this particular x:
            do jj=1,N_y 
               if (u(i,jj)>u(0,jj)) then
@@ -313,7 +316,6 @@ program main
                  EXIT
               endif
            enddo
-
            !Integrate to get delta_nu_star
            delta_nu_star = 0.d0
            do jj=1,N_y
@@ -321,57 +323,60 @@ program main
                  delta_nu_star = delta_nu_star + (1-u(i,jj)/u(0,jj))*(y_center(jj)-y_center(jj-1))
               endif
            enddo
-
            nu_diff_old = 0.d0
            nu_diff_new = 0.d0
            nu_bool = 0.d0
-           do jj=1,N_y
-              if (delta <0.001d0) then
+           do j=1,N_y
+              if (delta <0.000001d0) then
                  !This case is before the flow reaches the plate and no additional nu is needed
-                 nu_T(jj) = 0
+                 nu_T(i,j) = 0
               else
                  !This case is over the plate where nu_T needs to be computed
 
-                 p_x = (p(i+1,jj)-p(i-1,jj))/(2*dx)
-                 u_y = (u(i,jj+1)-u(i,jj-1)/(y_center(jj+1)-y_center(jj-1)))
-                 u_x = (u(i+1,jj)-u(i-1,jj))/(2*dx)
+                 p_x = (p(i+1,j)-p(i-1,j))/(2*dx)
+                 v_y = (v(i,j+1)-v(i,j-1)/(y_center(j+1)-y_center(j-1)))
+                 v_x = (v(i+1,j)-v(i-1,j))/(2*dx)
+                 u_x = (u(i+1,j)-u(i-1,j))/(2*dx)
+                 
+                 !tau = mu*u_y
 
-                 tau = mu * u_y
-
+                 !Calculate delta_nu
                  tau_w = mu*((u(i,2)-u(i,0))/(y_center(2)-y_center(0)))
                  u_tau = sqrt(tau_w/rho)
                  delta_nu = nu/u_tau
-                 Ap=26*(1+y_center(j)*p_x/(rho*u_tau**2))**(-1/2)
-                 yp = 0.d0
-                 nuTo = 0.d0
-                 yp = y_center(j)/delta
-                 nuTo = alpha*u(0,j)*delta_nu_star*(1+5.5*(y/delta)**6)**(-1)
-                 lm = k*y_center(j)*(1-exp(-yp/Ap))
-                 nuTi = lm**2*(u_x**2+u_y**2)**(1/2)
+                 
+                 !Calculate nu_Ti
 
+                 Ap=26.0/sqrt(1.0+y_center(j)*1.0/dx*(p(i+1,j)-p(i,j))/(rho*u_tau**2))
+                 lm=k*y_center(j)*(1.0-exp(-(y_center(j)*u_tau/nu)*1.0/Ap))
+                 u_x=(F_center(j)/dzeta*1/4.0*((u(i,j+1)+u(i-1,j+1))-(u(i,j-1)+u(i-1,j-1))))
+                 v_x=(1.0/dx*1/4.0*((v(i+1,j)+v(i+1,j-1))-(v(i-1,j)+v(i-1,j-1))))
+                 nuTi = lm**2*(u_x**2+v_x**2)**(1/2)
+
+                 !Calculate nu_To
+                 nuTo = alpha*u(0,j)*delta_nu_star*(1+5.5*(y_center(j)/delta)**6)**(-1)
+
+                 !Decide which nu_T* to use
                  nu_diff_new = nuTo-nuTi
                  
-                 if (nu_diff_new*nu_diff_old < 0) then
+                 if ((nu_diff_new*nu_diff_old < 0).and.(nu_bool==0.d0)) then
                     nu_bool = 1.d0
                  endif
 
                  !use nu_bool to set nu_T
                  if (nu_bool == 0.d0) then
-                    nu_T(jj) = nuTi
+                    nu_T(i,j) = nuTi
                  else
-                    nu_T(jj) = nuTo
+                    nu_T(i,j) = nuTo
                  endif
                  nu_diff_old = nu_diff_new
               endif
            enddo
-           
 
-           
-           
-           
-           
-           
-           
+
+        enddo
+    
+        do i=1,N_x
            do j=1,N_y
 
 !********************************************
@@ -408,13 +413,10 @@ program main
 !                print *, "delta_nu_star is = ", delta_nu_star
 !                print *, "NuTi is = ", nuTi
 !                print *, "NuTo is = ", nuTo
-!                if (y_center(jj)>delta) then
-!                   nu = nu + nuTo
-!                else
-!                   nu = nu + nuTi
-!                endif
-                nu = nu + nu_T(j)
 
+                nu = 1.d-3
+                nu = nu + nu_T(i,j)
+!                print *, "nu = ", nu, "nu_T(j) = ", nu_T(j)
                 ! Update to u* and v* value
                 u_star(i,j) = u(i,j) + dt*(-(uu_x+uv_y)+nu*(u_xx+u_yy))
                 v_star(i,j) = v(i,j) + dt*(-(vv_y+uv_x)+nu*(v_xx+v_yy))
@@ -461,8 +463,8 @@ program main
         enddo
         
         ! Finish up loop
-        print "(a,i4,a,i3,a,i3,a,e16.8)","Loop ",n,": (",i_R,",",j_R,") - R = ",R   
-        write (13,"(i4,i4,i4,e16.8)") n,i_R,j_R,R
+        print "(a,i6,a,i3,a,i3,a,e16.8)","Loop ",n,": (",i_R,",",j_R,") - R = ",R   
+        write (13,"(i7,i4,i4,e16.8)") n,i_R,j_R,R
         ! Write out u,v,p every n_steps 
         if (mod(n,n_steps) == 0) then
             frame = frame + 1
@@ -520,7 +522,7 @@ subroutine bc(u,v,U_inf)
     ! u(i,0) = -u(i,1)      u(i,N_y+1) = u(i,N_y)
     ! v(i,0) = 0.d0         v(i,N_y+1) = v(i,N_y)
     ! p(i,0) = p(i,1)       p(i,N_y+1) = 0.d0
-    forall(i=N_x/2:N_x+1)
+    forall(i=0:N_x+1)
         u(i,0) = -u(i,1)
         v(i,0) = 0.d0     
         u(i,N_y+1) = u(i,N_y)
@@ -545,14 +547,14 @@ subroutine bc(u,v,U_inf)
     !               |                               v(N_x+1,j) = 2 v(N_x,j) - v(N_x-1,j)
     !     + N_x,j   o N_x,j   + N_x+1,j  o N_x+1,j  p(N_x+1,j) = p(N_x,j)
     !               |
-    forall(j=1:N_y+1)
-        u(0,j) = U_inf
-        v(0,j) = 0.d0
-!         u(N_x+1,j) = 2.d0*u(N_x,j) - u(N_x-1,j)
-        u(N_x+1,j) = u(N_x,j)
-        v(N_x+1,j) = v(N_x,j)
+    do j=1,N_y+1
+       u(0,j) = U_inf!*2.0*y_center(j)
+       v(0,j) = 0.d0
+       !         u(N_x+1,j) = 2.d0*u(N_x,j) - u(N_x-1,j)
+       u(N_x+1,j) = u(N_x,j)
+       v(N_x+1,j) = v(N_x,j)
 !         v(N_x+1,j) = 2.d0*v(N_x,j) - v(N_x-1,j)
-    end forall
+    enddo
 
 end subroutine bc
 
@@ -575,7 +577,7 @@ subroutine solve_poisson(P,Q,a,b,cm,cp)
 
     ! Solver parameters
     logical, parameter :: verbose = .false.
-    integer, parameter :: MAX_ITERATIONS = 100
+    integer, parameter :: MAX_ITERATIONS = 50
     double precision, parameter :: TOLERANCE = 10.d-6
     double precision, parameter :: w = 1.6d0 ! 1 (GS) < w < 2
 
@@ -587,11 +589,11 @@ subroutine solve_poisson(P,Q,a,b,cm,cp)
         R = 0.d0
         ! Boundary conditions
         forall (j=0:N_y+1)
-            P(0,j) = P(1,j)        ! Left
-            P(N_x+1,j) = P(N_x,j)  ! Right
+           P(0,j) = P(1,j)        ! Left
+           P(N_x+1,j) = P(N_x,j)  ! Right
         end forall
         forall (i=0:N_x+1)
-            P(i,0) = P(i,1)        ! Bottom wall
+           P(i,0) = P(i,1)        ! Bottom wall
            P(i,N_y+1) = 0.d0      ! Free stream
         end forall
         do j=1,N_y
